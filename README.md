@@ -83,3 +83,47 @@ To complete the final deliverables for the assignment, execute the validation sc
 - The controller terminal showing topology maps, routes, installed flows, congestion logs, and firewall blocks.
 - The Mininet terminal showing successful pings, failed (blocked) pings, and iperf results.
 - Open vSwitch flow tables (`sudo ovs-ofctl -O OpenFlow13 dump-flows s1`).
+# SDN Path Tracing & Network Management Tool
+
+[![Python](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![Mininet](https://img.shields.io/badge/Mininet-2.3.0-green.svg)](http://mininet.org/)
+[![Ryu](https://img.shields.io/badge/Ryu-Controller-orange.svg)](https://ryu.readthedocs.io/en/latest/)
+
+## Overview
+The **SDN Path Tracing Tool** is a robust Software-Defined Networking (SDN) solution built using Mininet and the Ryu OpenFlow controller. This project demonstrates advanced controller-switch interactions, dynamic flow rule provisioning, and real-time network telemetry. 
+
+It functions as an intelligent network manager capable of dynamically discovering topologies, calculating optimal routing paths, enforcing L2/L3/L4 firewall policies, and monitoring link congestion in real-time.
+
+## Table of Contents
+- [Core Architecture & Features](#core-architecture--features)
+- [Topology Design](#topology-design)
+- [System Requirements](#system-requirements)
+- [Environment Setup & Installation](#environment-setup--installation)
+- [Operational Execution](#operational-execution)
+- [Functional Validation & Testing](#functional-validation--testing)
+- [System Telemetry & Artifacts](#system-telemetry--artifacts)
+
+## Core Architecture & Features
+* **Dynamic Topology Discovery:** Automatically maps out switches, links, and hosts within the network using OpenFlow protocols.
+* **Intelligent Path Calculation:** Utilizes Breadth-First Search (BFS) to compute and deploy the shortest path for packets, ensuring optimal routing.
+* **Fault Tolerance & Self-Healing:** Actively detects link failures and instantly recalculates and installs backup routing paths to maintain network integrity.
+* **Stateful Access Control (Firewall):** Enforces a dynamic security policy (configured via `policies.json`) to filter traffic at the hardware level. Capable of blocking specific MAC pairs, IP endpoints, or Layer 4 protocols (e.g., UDP).
+* **Congestion Monitoring:** Continuously polls OpenFlow port statistics to monitor Tx/Rx byte rates and identify traffic bottlenecks across links.
+
+## Topology Design
+This system utilizes a custom, redundant **Ring Topology** rather than a standard tree. This circular architecture provides multiple redundant pathways, allowing the system to demonstrate dynamic shortest-path routing, loop prevention, and automatic failover during link-failure recovery.
+
+**Network Architecture:**
+
+```text
+                    h1 (10.0.0.1)    h2 (10.0.0.2)
+                             \          /
+                           [s1: BLACKLIST]
+                           /             \
+                          /               \
+h6 (10.0.0.6) -- [s4: ALLOW ALL]     [s2: ALLOW ALL] -- h3 (10.0.0.3)
+                          \               /
+                           \             /
+                           [s3: WHITELIST]
+                             /          \
+                    h5 (10.0.0.5)    h4 (10.0.0.4)

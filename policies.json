@@ -1,0 +1,25 @@
+{
+    "firewall": {
+        "switch_policies": {
+            "3": {
+                "policy_type": "whitelist",
+                "allowed_protocols": [1] 
+            },
+            "1": {
+                "policy_type": "blacklist",
+                "blocked_mac_pairs": [
+                    ["00:00:00:00:00:02", "00:00:00:00:00:03"]
+                ],
+                "blocked_ipv4_pairs": [
+                    ["10.0.0.1", "10.0.0.4"]
+                ],
+                "blocked_protocols": [
+                    17
+                ]
+            },
+            "2": {
+                "policy_type": "allow_all"
+            }
+        }
+    }
+}

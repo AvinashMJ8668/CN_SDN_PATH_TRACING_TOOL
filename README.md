@@ -1,43 +1,85 @@
-# SDN Path Tracing & Network Management Tool
+# SDN Path Tracing Tool
 
-[![Python](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
-[![Mininet](https://img.shields.io/badge/Mininet-2.3.0-green.svg)](http://mininet.org/)
-[![Ryu](https://img.shields.io/badge/Ryu-Controller-orange.svg)](https://ryu.readthedocs.io/en/latest/)
+## Problem Statement & Objective
+The goal of this assignment is to implement an SDN-based solution using Mininet and an OpenFlow controller (Ryu) that demonstrates controller-switch interaction, flow rule design, and network behavior observation. This project functions as a Path Tracing Tool that dynamically discovers network topologies, calculates shortest paths, tracks flow rules, implements access control (firewall filtering), and monitors link congestion.
 
-## Overview
-The **SDN Path Tracing Tool** is a robust Software-Defined Networking (SDN) solution built using Mininet and the Ryu OpenFlow controller. This project demonstrates advanced controller-switch interactions, dynamic flow rule provisioning, and real-time network telemetry. 
+## Topology Design & Justification
+Instead of a standard tree topology, this project utilizes a custom triangle topology (`topologies/custom_topo.py`) consisting of three interconnected switches (`s1`, `s2`, `s3`). 
+**Justification**: This topology introduces multiple redundant paths between hosts, making it ideal for demonstrating dynamic shortest-path routing (using Breadth-First Search) and testing automatic path recovery when a link fails.
 
-It functions as an intelligent network manager capable of dynamically discovering topologies, calculating optimal routing paths, enforcing L2/L3/L4 firewall policies, and monitoring link congestion in real-time.
+## Core Features
+- **Topology Discovery:** Dynamically detects switches and links in the network.
+- **Path Calculation & Routing:** Computes the shortest path for packets using Breadth-First Search (BFS).
+- **Flow Rule Tracking:** Installs and tracks OpenFlow match-action rules dynamically.
+- **Blocking/Filtering (Firewall):** Implements an access control policy driven by a `policies.json` configuration file to drop packets between specific hosts (e.g., `h1` and `h4`), demonstrating hardware-level blocking via flow rules.
+- **Congestion Monitoring:** Actively polls switch port statistics to monitor traffic load across links.
+- **Fault Tolerance:** Automatically detects link failures and recalculates routing paths.
 
-## Table of Contents
-- [Core Architecture & Features](#core-architecture--features)
-- [Topology Design](#topology-design)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Validation & Testing Scenarios](#validation--testing-scenarios)
-- [System Artifacts & Logging](#system-artifacts--logging)
+## Prerequisites
+- Python 3.9
+- Mininet
+- Open vSwitch (OVS)
+- uv (Python package manager)
 
-## Core Architecture & Features
-* **Dynamic Topology Discovery:** Automatically maps out switches, links, and hosts within the network using OpenFlow protocols.
-* **Intelligent Path Calculation:** Utilizes Breadth-First Search (BFS) to compute and deploy the shortest path for packets, ensuring optimal routing.
-* **Fault Tolerance & Self-Healing:** Actively detects link failures and instantly recalculates and installs backup routing paths to maintain network integrity.
-* **Stateful Access Control (Firewall):** Enforces a dynamic security policy (configured via `policies.json`) to filter traffic at the hardware level. Capable of blocking specific MAC pairs, IP endpoints, or Layer 4 protocols (e.g., UDP).
-* **Congestion Monitoring:** Continuously polls OpenFlow port statistics to monitor Tx/Rx byte rates and identify traffic bottlenecks across links.
+## Installation
+Due to legacy build dependencies in Ryu, the environment must be configured precisely using `uv`:
 
-## Topology Design
-This system utilizes a custom, redundant triangle topology rather than a standard tree. This architecture provides multiple redundant pathways, allowing the system to demonstrate dynamic shortest-path routing and automatic link-failure recovery.
+```bash
+# 1. Install base dependencies
+uv sync
 
-**Network Architecture:**
-```text
-                    h1 (10.0.0.1)    h2 (10.0.0.2)
-                             \          /
-                           [s1: BLACKLIST]
-                           /             \
-                          /               \
-h6 (10.0.0.6) -- [s4: ALLOW ALL]     [s2: ALLOW ALL] -- h3 (10.0.0.3)
-                          \               /
-                           \             /
-                           [s3: WHITELIST]
-                             /          \
-                    h5 (10.0.0.5)    h4 (10.0.0.4)
+# 2. Install Ryu and specific Eventlet version bypassing build isolation
+uv pip install ryu --no-build-isolation
+uv pip install eventlet==0.30.2
+```
+
+## Usage
+Start the Ryu controller in one terminal:
+```bash
+uv run ryu-manager --observe-links main.py
+```
+
+Start the custom Mininet topology in a second terminal:
+```bash
+sudo mn --custom topologies/custom_topo.py --topo custom --controller=remote --switch=ovsk,protocols=OpenFlow13
+```
+
+## Validation Scenarios
+
+### Scenario 1: Route Discovery and Flow Installation
+1. In the Mininet CLI, initiate a ping between two allowed hosts:
+   ```bash
+   mininet> h1 ping h2 -c 4
+   ```
+2. Verify the controller terminal logs the discovered path `[ROUTE]` and installed flow rules `[FLOW INSTALLED]`.
+
+### Scenario 2: Dynamic Path Recovery (Failure Simulation)
+1. In the Mininet CLI, take down an active link (e.g., between `s1` and `s2`):
+   ```bash
+   mininet> link s1 s2 down
+   ```
+2. Initiate another ping (e.g. `h1 ping h3`). The controller will detect the topology change, recalculate the graph, and output the new backup path routing through `s3`.
+
+### Scenario 3: Congestion Monitoring
+1. In the Mininet CLI, initiate an iperf test between two hosts to generate heavy traffic:
+   ```bash
+   mininet> iperf h1 h3
+   ```
+2. Verify the controller terminal outputs `[MONITOR]` logs indicating the traffic load in bytes.
+
+### Scenario 4: Access Control (Allowed vs. Blocked)
+1. In the Mininet CLI, verify that `h1` can communicate with `h2` (Allowed):
+   ```bash
+   mininet> h1 ping h2 -c 1
+   ```
+2. Attempt to ping `h4` from `h1` (Blocked by Firewall):
+   ```bash
+   mininet> h1 ping h4 -c 1
+   ```
+3. The ping will fail (100% packet loss). Verify that the controller logs `[FIREWALL BLOCKED] Dropping packet...` and installs a drop flow rule with an empty action list to block future packets in hardware.
+
+## Expected Output / Proof of Execution
+To complete the final deliverables for the assignment, execute the validation scenarios above and capture screenshots of:
+- The controller terminal showing topology maps, routes, installed flows, congestion logs, and firewall blocks.
+- The Mininet terminal showing successful pings, failed (blocked) pings, and iperf results.
+- Open vSwitch flow tables (`sudo ovs-ofctl -O OpenFlow13 dump-flows s1`).

@@ -83,7 +83,7 @@ To complete the final deliverables for the assignment, execute the validation sc
 - The controller terminal showing topology maps, routes, installed flows, congestion logs, and firewall blocks.
 - The Mininet terminal showing successful pings, failed (blocked) pings, and iperf results.
 - Open vSwitch flow tables (`sudo ovs-ofctl -O OpenFlow13 dump-flows s1`).
-# SDN Path Tracing & Network Management Tool
+
 
 [![Python](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
 [![Mininet](https://img.shields.io/badge/Mininet-2.3.0-green.svg)](http://mininet.org/)

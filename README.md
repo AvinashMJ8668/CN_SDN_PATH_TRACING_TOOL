@@ -1,36 +1,41 @@
-Usage
-Start the Ryu controller in one terminal:
+# SDN Path Tracing & Network Management Tool
 
-Start the custom Mininet topology in a second terminal:
+[![Python](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
+[![Mininet](https://img.shields.io/badge/Mininet-2.3.0-green.svg)](http://mininet.org/)
+[![Ryu](https://img.shields.io/badge/Ryu-Controller-orange.svg)](https://ryu.readthedocs.io/en/latest/)
 
-Validation Scenarios
-Scenario 1: Route Discovery and Flow Installation
-In the Mininet CLI, initiate a ping between two allowed hosts:
+## Overview
+The **SDN Path Tracing Tool** is a robust Software-Defined Networking (SDN) solution built using Mininet and the Ryu OpenFlow controller. This project demonstrates advanced controller-switch interactions, dynamic flow rule provisioning, and real-time network telemetry. 
 
-Verify the controller terminal logs the discovered path [ROUTE] and installed flow rules [FLOW INSTALLED].
+It functions as an intelligent network manager capable of dynamically discovering topologies, calculating optimal routing paths, enforcing L2/L3/L4 firewall policies, and monitoring link congestion in real-time.
 
-Scenario 2: Dynamic Path Recovery (Failure Simulation)
-In the Mininet CLI, take down an active link (e.g., between s1 and s2):
+## Table of Contents
+- [Core Architecture & Features](#core-architecture--features)
+- [Topology Design](#topology-design)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Validation & Testing Scenarios](#validation--testing-scenarios)
+- [System Artifacts & Logging](#system-artifacts--logging)
 
-Initiate another ping (e.g. h1 ping h3). The controller will detect the topology change, recalculate the graph, and output the new backup path routing through s3.
+## Core Architecture & Features
+* **Dynamic Topology Discovery:** Automatically maps out switches, links, and hosts within the network using OpenFlow protocols.
+* **Intelligent Path Calculation:** Utilizes Breadth-First Search (BFS) to compute and deploy the shortest path for packets, ensuring optimal routing.
+* **Fault Tolerance & Self-Healing:** Actively detects link failures and instantly recalculates and installs backup routing paths to maintain network integrity.
+* **Stateful Access Control (Firewall):** Enforces a dynamic security policy (configured via `policies.json`) to filter traffic at the hardware level. Capable of blocking specific MAC pairs, IP endpoints, or Layer 4 protocols (e.g., UDP).
+* **Congestion Monitoring:** Continuously polls OpenFlow port statistics to monitor Tx/Rx byte rates and identify traffic bottlenecks across links.
 
-Scenario 3: Congestion Monitoring
-In the Mininet CLI, initiate an iperf test between two hosts to generate heavy traffic:
+## Topology Design
+This system utilizes a custom, redundant triangle topology rather than a standard tree. This architecture provides multiple redundant pathways, allowing the system to demonstrate dynamic shortest-path routing and automatic link-failure recovery.
 
-Verify the controller terminal outputs [MONITOR] logs indicating the traffic load in bytes.
-
-Scenario 4: Access Control (Allowed vs. Blocked)
-In the Mininet CLI, verify that h1 can communicate with h2 (Allowed):
-
-Attempt to ping h4 from h1 (Blocked by Firewall):
-
-The ping will fail (100% packet loss). Verify that the controller logs [FIREWALL BLOCKED] Dropping packet... and installs a drop flow rule with an empty action list to block future packets in hardware.
-
-Expected Output / Proof of Execution
-To complete the final deliverables for the assignment, execute the validation scenarios above and capture screenshots of:
-
-The controller terminal showing topology maps, routes, installed flows, congestion logs, and firewall blocks.
-
-The Mininet terminal showing successful pings, failed (blocked) pings, and iperf results.
-
-Open vSwitch flow tables (sudo ovs-ofctl -O OpenFlow13 dump-flows s1).
+**Network Architecture:**
+```text
+  h1 (10.0.0.1)                    h3 (10.0.0.3)
+  h2 (10.0.0.2)                    |
+       |                           |
+       |                     [s2: ALLOW ALL]
+       |                    /              \
+  [s1: BLACKLIST] ----------                [s3: WHITELIST]
+   - blocks h1<->h4 (IP)                     - ICMP only
+   - blocks h2<->h3 (MAC)                         |
+   - blocks UDP                             h4 (10.0.0.4)

@@ -1,10 +1,6 @@
 {
     "firewall": {
         "switch_policies": {
-            "3": {
-                "policy_type": "whitelist",
-                "allowed_protocols": [1] 
-            },
             "1": {
                 "policy_type": "blacklist",
                 "blocked_mac_pairs": [
@@ -18,6 +14,13 @@
                 ]
             },
             "2": {
+                "policy_type": "allow_all"
+            },
+            "3": {
+                "policy_type": "whitelist",
+                "allowed_protocols": [1] 
+            },
+            "4": {
                 "policy_type": "allow_all"
             }
         }

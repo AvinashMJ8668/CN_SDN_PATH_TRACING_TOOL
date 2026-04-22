@@ -29,73 +29,14 @@ It functions as an intelligent network manager capable of dynamically discoverin
 This system utilizes a custom, redundant triangle topology rather than a standard tree. This architecture provides multiple redundant pathways, allowing the system to demonstrate dynamic shortest-path routing and automatic link-failure recovery.
 
 **Network Architecture:**
-```text
-  h1 (10.0.0.1)                    h3 (10.0.0.3)
-  h2 (10.0.0.2)                    |
-       |                           |
-       |                     [s2: ALLOW ALL]
-       |                    /              \
-  [s1: BLACKLIST] ----------                [s3: WHITELIST]
-   - blocks h1<->h4 (IP)                     - ICMP only
-   - blocks h2<->h3 (MAC)                         |
-   - blocks UDP                             h4 (10.0.0.4)
-Prerequisites
-Python: ==3.9.*
-
-Network Emulator: Mininet & Open vSwitch (OVS)
-
-Package Manager: uv (recommended for strict dependency resolution)
-
-Installation
-Due to specific build dependencies in the Ryu controller, the environment must be configured exactly as follows using uv:
-
-Bash
-# 1. Install base dependencies from the lockfile
-uv sync
-
-# 2. Install Ryu and the required Eventlet version (bypassing build isolation)
-uv pip install ryu --no-build-isolation
-uv pip install eventlet==0.30.2
-Usage
-The environment requires two terminal sessions—one for the SDN controller and one for the simulated data plane.
-
-Terminal 1: Initialize the Ryu Controller
-
-Bash
-uv run ryu-manager --observe-links main.py
-Terminal 2: Launch the Mininet Topology
-
-Bash
-sudo mn --custom topologies/custom_topo.py --topo custom --controller=remote --switch=ovsk,protocols=OpenFlow13
-Validation & Testing Scenarios
-Run the following commands in the Mininet CLI (mininet>) to validate system capabilities:
-
-1. Route Discovery & Flow Provisioning
-Action: h1 ping h2 -c 4
-Expected Behavior: The controller dynamically maps the route and outputs [ROUTE] and [FLOW INSTALLED] logs. OpenFlow rules are pushed to the switches.
-
-2. Dynamic Path Recovery (Failover)
-Action: 1. Take down an active link: link s1 s2 down
-2. Ping across the network: h1 ping h3
-Expected Behavior: The controller detects the topology change, flushes outdated flows, recalculates the graph, and establishes a new backup path via s3.
-
-3. Congestion Monitoring
-Action: Generate heavy traffic using iperf: iperf h1 h3
-Expected Behavior: The controller terminal will actively poll and display [MONITOR] logs detailing the traffic load (Tx/Rx) in KB/s for the utilized switch ports.
-
-4. Firewall & Access Control
-Action: Attempt an unauthorized connection: h1 ping h4 -c 1
-Expected Behavior: The ping fails with 100% packet loss. The controller logs [FIREWALL] Switch X BLOCKED... and instantly installs a hardware-level drop rule (empty action list) to block subsequent unauthorized packets at line rate.
-
-System Artifacts & Logging
-When monitoring the controller output or inspecting the switches directly (e.g., sudo ovs-ofctl -O OpenFlow13 dump-flows s1), the system provides comprehensive telemetry:
-
-[TOPOLOGY]: Real-time mapping of switch datapath IDs and ports.
-
-[ROUTE]: Step-by-step pathing logic.
-
-[FLOW INSTALLED]: Confirmation of match-action rules pushed to OVS.
-
-[MONITOR]: Port statistics and bandwidth utilization.
-
-[FIREWALL]: Security alerts for dropped packets based on the JSON configuration.
+h1 (10.0.0.1)    h2 (10.0.0.2)
+                             \          /
+                           [s1: BLACKLIST]
+                           /             \
+                          /               \
+h6 (10.0.0.6) -- [s4: ALLOW ALL]     [s2: ALLOW ALL] -- h3 (10.0.0.3)
+                          \               /
+                           \             /
+                           [s3: WHITELIST]
+                             /          \
+                    h5 (10.0.0.5)    h4 (10.0.0.4)

@@ -29,7 +29,8 @@ It functions as an intelligent network manager capable of dynamically discoverin
 This system utilizes a custom, redundant triangle topology rather than a standard tree. This architecture provides multiple redundant pathways, allowing the system to demonstrate dynamic shortest-path routing and automatic link-failure recovery.
 
 **Network Architecture:**
-''h1 (10.0.0.1)    h2 (10.0.0.2)
+```text
+                    h1 (10.0.0.1)    h2 (10.0.0.2)
                              \          /
                            [s1: BLACKLIST]
                            /             \
@@ -39,4 +40,4 @@ h6 (10.0.0.6) -- [s4: ALLOW ALL]     [s2: ALLOW ALL] -- h3 (10.0.0.3)
                            \             /
                            [s3: WHITELIST]
                              /          \
-                    h5 (10.0.0.5)    h4 (10.0.0.4)''
+                    h5 (10.0.0.5)    h4 (10.0.0.4)
